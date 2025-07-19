@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "http-mcp"
+version = "0.1.0"
+description = "HTTP MCP Server for web scraping debug workflows"
+authors = [{name = "Alex Williamson"}]
+dependencies = [
+    "mcp>=1.0.0",
+    "fastmcp>=0.2.0", 
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+    "aiofiles>=23.0.0"
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+http-mcp = "http_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/http_mcp"]
