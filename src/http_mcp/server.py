@@ -69,7 +69,22 @@ async def make_request(
     data: Optional[Union[str, Dict[str, Any]]] = None,
     timeout: Optional[int] = 30
 ) -> HTTPResponse:
-    """Make HTTP request and return detailed response."""
+    """Make an HTTP request to a specified URL with configurable options.
+    
+    This is the core HTTP client tool that sends requests using any standard HTTP method
+    and returns comprehensive response data including headers, content, timing metrics,
+    and success status. Automatically handles JSON serialization and content-type headers.
+    
+    Args:
+        method: HTTP method to use (e.g., "GET", "POST", "PUT", "DELETE", "PATCH")
+        url: Target URL for the request (e.g., "https://api.example.com/users", "http://localhost:3000/api/data")
+        headers: Optional dictionary of HTTP headers to send (e.g., {"Authorization": "Bearer token", "User-Agent": "MyApp/1.0"})
+        data: Optional request body data - can be a string or dict (dict will be JSON-serialized automatically)
+        timeout: Request timeout in seconds, defaults to 30 seconds
+    
+    Returns:
+        HTTPResponse with status_code, headers dict, content string, elapsed_ms timing, url, method, success boolean, and optional error message
+    """
     try:
         client = await get_http_client()
         start_time = time.time()
@@ -125,7 +140,17 @@ async def make_request(
 
 @mcp.tool()
 async def analyze_response(response_data: Dict[str, Any]) -> ResponseAnalysis:
-    """Analyze HTTP response structure and metadata."""
+    """Analyze HTTP response data to extract metadata, performance metrics, and content characteristics.
+    
+    This tool takes the response from make_request and provides detailed analysis including
+    content type detection, security header analysis, caching information, and performance metrics.
+    
+    Args:
+        response_data: Dictionary containing HTTP response data from make_request (must include 'headers', 'content', 'status_code', 'elapsed_ms' keys)
+    
+    Returns:
+        ResponseAnalysis with content_type, content_length, is_json/is_html flags, status_category, headers_analysis, and performance_metrics
+    """
     try:
         headers = response_data.get("headers", {})
         content = response_data.get("content", "")
@@ -196,7 +221,17 @@ async def analyze_response(response_data: Dict[str, Any]) -> ResponseAnalysis:
 
 @mcp.tool()
 async def extract_headers(response_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract and categorize HTTP headers."""
+    """Extract and categorize HTTP response headers into logical groups.
+    
+    This tool organizes response headers into categories (security, caching, content, server, custom)
+    to help understand the server configuration and response characteristics.
+    
+    Args:
+        response_data: Dictionary containing HTTP response data with 'headers' key from make_request
+    
+    Returns:
+        Dict with 'success' status, 'categorized_headers' containing security/caching/content/server/custom sections, and 'total_headers' count
+    """
     try:
         headers = response_data.get("headers", {})
         
@@ -239,7 +274,18 @@ async def extract_headers(response_data: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp.tool()
 async def validate_status(response_data: Dict[str, Any], expected_status: int) -> Dict[str, Any]:
-    """Validate response status code against expected value."""
+    """Validate that an HTTP response has the expected status code.
+    
+    This tool checks if the actual response status matches what was expected,
+    useful for API testing and validation workflows.
+    
+    Args:
+        response_data: Dictionary containing HTTP response data with 'status_code' key from make_request
+        expected_status: The HTTP status code you expected (e.g., 200, 201, 404, 500)
+    
+    Returns:
+        Dict with 'success' status, 'actual_status', 'expected_status', 'status_match' boolean, and 'status_category' classification
+    """
     try:
         actual_status = response_data.get("status_code", 0)
         
@@ -261,7 +307,23 @@ async def debug_request(
     request_config: Dict[str, Any],
     session_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Debug HTTP request with detailed logging and artifact storage."""
+    """Execute an HTTP request with comprehensive debugging, logging, and artifact storage.
+    
+    This tool combines request execution with detailed analysis and optionally saves
+    debug artifacts to disk. Perfect for troubleshooting API issues or detailed inspection.
+    
+    Args:
+        request_config: Dictionary with request configuration containing:
+            - 'method': HTTP method (required)
+            - 'url': Target URL (required)
+            - 'headers': Optional headers dict
+            - 'data': Optional request body
+            - 'timeout': Optional timeout in seconds
+        session_id: Optional session identifier for organizing debug artifacts in /tmp/debug_artifacts/sessions/{session_id}/
+    
+    Returns:
+        Dict with 'success' status, 'response' data, 'analysis' results, and 'artifacts' info (file paths if session_id provided)
+    """
     try:
         # Extract request configuration
         method = request_config.get("method", "GET")
@@ -318,7 +380,19 @@ async def compare_responses(
     response1_data: Dict[str, Any],
     response2_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Compare two HTTP responses and highlight differences."""
+    """Compare two HTTP responses and identify differences in status, headers, and content.
+    
+    This tool performs detailed comparison between two response objects, highlighting
+    differences in status codes, headers, and content characteristics. Useful for A/B testing,
+    API version comparison, or debugging response changes.
+    
+    Args:
+        response1_data: First HTTP response dictionary from make_request
+        response2_data: Second HTTP response dictionary from make_request
+    
+    Returns:
+        Dict with 'success' status, 'comparison' metrics, 'header_differences' breakdown, and 'content_similarity' analysis
+    """
     try:
         r1_status = response1_data.get("status_code", 0)
         r2_status = response2_data.get("status_code", 0)
@@ -387,7 +461,18 @@ async def compare_responses(
 
 @mcp.tool()
 async def profile_performance(url: str, iterations: int = 3) -> Dict[str, Any]:
-    """Profile HTTP request performance over multiple iterations."""
+    """Measure HTTP request performance over multiple iterations to analyze consistency and speed.
+    
+    This tool sends multiple GET requests to the same URL and calculates performance statistics
+    including average/min/max response times, success rates, and content size metrics.
+    
+    Args:
+        url: Target URL to profile (e.g., "https://api.example.com/health")
+        iterations: Number of requests to send (1-10, defaults to 3)
+    
+    Returns:
+        Dict with 'success' status, 'url', 'iterations', individual 'results' array, and aggregate 'statistics'
+    """
     try:
         if iterations <= 0 or iterations > 10:
             return {"success": False, "error": "Iterations must be between 1 and 10"}
@@ -437,7 +522,15 @@ async def profile_performance(url: str, iterations: int = 3) -> Dict[str, Any]:
 
 @mcp.tool()
 async def close_http_client() -> Dict[str, Any]:
-    """Close the HTTP client (cleanup)."""
+    """Close the global HTTP client connection to free resources.
+    
+    This cleanup tool closes the persistent HTTP client connection and releases
+    associated resources. Should be called when HTTP operations are complete
+    or when shutting down the MCP server.
+    
+    Returns:
+        Dict with 'success' status and 'message' confirming closure, or error details
+    """
     global http_client
     try:
         if http_client:
